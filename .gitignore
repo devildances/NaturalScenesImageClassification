@@ -4,4 +4,3 @@ __pycache__/
 models/
 PretrainedModel.ipynb
 ScratchModel.ipynb
-test.ipynb

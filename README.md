@@ -11,7 +11,7 @@
       &emsp;CNNs are regularized versions of multilayer perceptrons. Multilayer perceptrons usually mean fully connected networks, that is, each neuron in one layer is connected to all neurons in the next layer. The "fully-connectedness" of these networks makes them prone to overfitting data. Typical ways of regularization include adding some form of magnitude measurement of weights to the loss function.
     </p>
     <h3><a href="https://en.wikipedia.org/wiki/Convolutional_neural_network">1. CNN Architecture</a></h3>
-    <img align="center" src="images/cnn_architecture.png" />
+    <img align="center" src="images/cnn_architecture.jpeg" />
     <h4>1. a) Convolutional</h4>
     <p>
       &emsp;When programming a CNN, the input is a tensor with shape (number of images) x (image height) x (image width) x (image depth). Then after passing through a convolutional layer, the image becomes abstracted to a feature map, with shape (number of images) x (feature map height) x (feature map width) x (feature map channels). A convolutional layer within a neural network should have the following attributes:<ul>

@@ -1,3 +1,7 @@
 tfproject/
 __pycache__/
 .vscode/
+models/
+PretrainedModel.ipynb
+ScratchModel.ipynb
+test.ipynb

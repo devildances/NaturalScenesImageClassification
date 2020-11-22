@@ -1,14 +1,14 @@
 import pandas as pd, numpy as np
-import os, random
+import os, random, datetime
 import matplotlib.pyplot as plt, seaborn as sns
 from matplotlib.image import imread
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, BatchNormalization, Dropout
 from tensorflow.keras.activations import relu, softmax
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras.losses import sparse_categorical_crossentropy, categorical_crossentropy
-from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint
 from tensorflow.keras.preprocessing import image
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -16,9 +16,13 @@ class pathDir:
     __train_dir = "../../DATA/NaturalSceneImages/seg_train/seg_train/"
     __test_dir = "../../DATA/NaturalSceneImages/seg_test/seg_test/"
     __pred_dir = "../../DATA/NaturalSceneImages/seg_pred/seg_pred/"
+    __pretrained_dir = "../../PRETRAINEDMODEL/"
 
     def loadDir(self):
         return [pathDir.__train_dir, pathDir.__test_dir, pathDir.__pred_dir]
+
+    def pmDir(self):
+        return pathDir.__pretrained_dir
 
 def trainSampleView():
     train_dir = pathDir().loadDir()[0]
@@ -142,14 +146,24 @@ def modeling(input_shape=(150,150,3), output_label=1, verbose=False):
         print(model.summary())
     return model
 
-def trainModel(model, data_train, data_validation, early_stop=False, num_epochs=10, verbose=0):
+def trainModel(model, data_train, data_validation, early_stop=False, patience=2, checkpoint=False, model_name=str(int(datetime.datetime.now().timestamp())), num_epochs=10, verbose=0):
     steps_per_epoch = data_train.n // data_train.batch_size
     validation_steps = data_validation.n // data_validation.batch_size
     callbacks = []
 
     if early_stop:
-        es = EarlyStopping(monitor="val_loss", patience=5, verbose=verbose)
+        es = EarlyStopping(monitor="val_loss", patience=patience, verbose=verbose)
         callbacks.append(es)
+
+    if checkpoint:
+        cp = ModelCheckpoint(filepath="models/"+model_name+".h5",
+                            monitor="val_loss",
+                            save_best_only=True,
+                            save_weights_only=False,
+                            verbose=verbose,
+                            mode='min',
+                            save_freq='epoch')
+        callbacks.append(cp)
 
     history = model.fit(data_train,
                         epochs=num_epochs,
@@ -158,6 +172,9 @@ def trainModel(model, data_train, data_validation, early_stop=False, num_epochs=
                         validation_data=data_validation,
                         steps_per_epoch=steps_per_epoch,
                         validation_steps=validation_steps)
+
+    if checkpoint:
+        model = load_model(filepath="models/"+model_name+".h5")
 
     return model, history
 
@@ -179,6 +196,7 @@ def modelEvaluation(model, history, data_validation):
     plt.suptitle('Train and validation')
     plt.show()
 
+    print("\n\n")
     test_loss, test_acc = model.evaluate(data_validation)
     print("validation accuracy :", str(test_acc*100)+"%")
     print("validation loss :", test_loss)
@@ -195,7 +213,7 @@ def modelReport(model, data_validation):
     plt.show()
 
 def predictNewImagesInBatch(model, categories_dict, image_shape):
-    pred_dir = "../../DATA/NaturalSceneImages/seg_pred/seg_pred/"
+    pred_dir = pathDir().loadDir()[2]
     fig, ax = plt.subplots(nrows=5, ncols=5, figsize=(25,25))
 
     for row in range(5):
@@ -204,7 +222,7 @@ def predictNewImagesInBatch(model, categories_dict, image_shape):
             img_path = pred_dir+os.listdir(path=pred_dir)[idx]
             img = image.load_img(pred_dir+os.listdir(path=pred_dir)[idx], target_size=(image_shape[0], image_shape[1]))
             img = np.expand_dims(image.img_to_array(img), axis=0)
-            pred = np.argmax(model.predict(img), axis=-1)[0]
+            pred = np.argmax(model.predict(img/255), axis=-1)[0]
             ax[row][col].imshow(imread(img_path))
             ax[row][col].axis('off')
             ax[row][col].set_title(str(categories_dict[pred]))

@@ -8,7 +8,8 @@ from tensorflow.keras.activations import relu, softmax
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras.losses import sparse_categorical_crossentropy, categorical_crossentropy, CategoricalCrossentropy
 from tensorflow.keras.applications.inception_v3 import InceptionV3
-from tensorflow.keras.applications import VGG16, ResNet50
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.applications import VGG16
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 
 def inceptionV3Modeling(input_shape=(150,150,3), output_label=1, verbose=False):
@@ -93,27 +94,18 @@ def resNet50Modeling(input_shape=(150,150,3), output_label=1, verbose=False):
                                     include_top=False,
                                     weights=None)
 
-    pretrained_model.load_weights(filepath=model_path)
+    # pretrained_model.load_weights(filepath=model_path)
+    # for layer in pretrained_model.layers:
+    #     layer.trainable = False
 
-    for layer in pretrained_model.layers:
-        layer.trainable = False
-
-    last_layer_ouput = pretrained_model.get_layer('conv5_block3_out').output
-    # avg_pool = AveragePooling2D(pool_size=(2,2), padding='same', strides=(1,1))(last_layer_ouput)
-    # flat = Flatten()(avg_pool)
-    # dense1 = Dense(units=512, activation=tf.nn.relu)(flat)
-    # dense2 = Dense(units=512, activation=tf.nn.relu)(dense1)
-    # drop1 = Dropout(0.2)(dense2)
+    last_layer_ouput = pretrained_model.output
     gavg_pool = GlobalAveragePooling2D()(last_layer_ouput)
-    flat = Flatten()(gavg_pool)
-    dense1 = Dense(units=512, activation=tf.nn.relu)(flat)
-    dense2 = Dense(units=512, activation=tf.nn.relu)(dense1)
-    drop1 = Dropout(0.2)(dense2)
+    drop1 = Dropout(0.7)(gavg_pool)
     output = Dense(units=output_label, activation=tf.nn.softmax)(drop1)
 
     model = Model(inputs=pretrained_model.input, outputs=output)
 
-    model.compile(optimizer=Adam(learning_rate=0.0001), loss=CategoricalCrossentropy(label_smoothing=0.1), metrics=["accuracy"])
+    model.compile(optimizer=Adam(learning_rate=0.0001), loss=categorical_crossentropy, metrics=["accuracy"])
 
     if verbose:
         print(model.summary())
